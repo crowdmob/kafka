@@ -96,7 +96,7 @@ func (consumer *BrokerConsumer) ConsumeUntilQuit(pollTimeoutMs int64, quit chan 
     for !quitReceived {
       _, err := consumer.consumeWithConn(conn, msgHandler)
 			if err != nil && err != io.EOF {
-				log.Println("ERROR: ", err)
+				log.Printf("ERROR: [%s] %#v\n",  consumer.broker.topic, err)
 			}
       time.Sleep(time.Duration(pollTimeoutMs) * time.Millisecond)
     }
