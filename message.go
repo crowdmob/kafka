@@ -85,7 +85,7 @@ func (m *Message) Encode() []byte {
 func Decode(packet []byte) *Message {
 	length := binary.BigEndian.Uint32(packet[0:])
 	if length > uint32(len(packet[4:])) {
-		log.Printf("length mismatch, expected at least: %X, was: %X\n", length, len(packet[4:]))
+		log.Printf("length mismatch, expected at least: %X, was: %X from packet %#v\n", length, len(packet[4:]), packet)
 		return nil
 	}
 	msg := Message{}
