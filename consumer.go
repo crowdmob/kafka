@@ -43,6 +43,7 @@ import (
 	"log"
 	"net"
 	"time"
+  "os"
 )
 
 type BrokerConsumer struct {
@@ -74,7 +75,7 @@ func NewBrokerOffsetConsumer(hostname string, topic string, partition int) *Brok
 }
 
 // Keeps consuming forward until quit, outputing errors, but not dying on them
-func (consumer *BrokerConsumer) ConsumeUntilQuit(pollTimeoutMs int64, quit chan bool, msgHandler func(*Message)) (int64, int64, error) {
+func (consumer *BrokerConsumer) ConsumeUntilQuit(pollTimeoutMs int64, quit chan os.Signal, msgHandler func(*Message)) (int64, int64, error) {
 	conn, err := consumer.broker.connect()
 	if err != nil {
 		return -1, 0, err
