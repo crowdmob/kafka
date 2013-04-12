@@ -91,8 +91,7 @@ func (consumer *BrokerConsumer) ConsumeOnChannel(msgChan chan *Message, pollTime
 
 			if err != nil {
 				if err != io.EOF {
-					log.Println("ERROR IN MESSAGE BELOW: ", err)
-          msg.Print()
+					log.Println("CORRUPTED MESSAGE FOUND: ", err)
 				}
         // break // FIXME TODO TMP don't die on errors with one message
 			}
