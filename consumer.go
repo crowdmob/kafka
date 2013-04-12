@@ -73,7 +73,39 @@ func NewBrokerOffsetConsumer(hostname string, topic string, partition int) *Brok
 		maxSize: 0}
 }
 
-// Continues until quit, notifying log.Println of any corrupted messages
+// Keeps consuming forward until quit, outputing errors, but not dying on them
+func (consumer *BrokerConsumer) ConsumeUntilQuit(pollTimeoutMs int64, quit chan bool, msgHandler func(*Message)) (int64, int64, error) {
+	conn, err := consumer.broker.connect()
+	if err != nil {
+		return -1, 0, err
+	}
+
+	messageCount := int64(0)
+	skippedMessageCount := int64(0)
+  
+  quitReceived := false
+	done := make(chan bool, 1)
+  
+  go func() {
+    <-quit
+    quitReceived = true
+  }()
+  
+  go func() {
+    for !quitReceived {
+      _, err := consumer.consumeWithConn(conn, msgHandler)
+			if err != nil && err != io.EOF {
+				log.Println("ERROR: ", err)
+			}
+      time.Sleep(time.Duration(pollTimeoutMs) * time.Millisecond)
+    }
+		done <- true
+  }()
+  
+	<-done // wait until the last iteration finishes before returning
+  return messageCount, skippedMessageCount, nil
+}
+
 func (consumer *BrokerConsumer) ConsumeOnChannel(msgChan chan *Message, pollTimeoutMs int64, quit chan bool) (int, error) {
 	conn, err := consumer.broker.connect()
 	if err != nil {
@@ -91,9 +123,9 @@ func (consumer *BrokerConsumer) ConsumeOnChannel(msgChan chan *Message, pollTime
 
 			if err != nil {
 				if err != io.EOF {
-					log.Println("ERROR: Corrupted message skipped: ", err)
+					log.Println("Fatal Error: ", err)
 				}
-        // break // FIXME TODO TMP don't die on errors with one message
+				break
 			}
 			time.Sleep(time.Duration(pollTimeoutMs) * time.Millisecond)
 		}
