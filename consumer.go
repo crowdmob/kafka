@@ -97,6 +97,9 @@ func (consumer *BrokerConsumer) ConsumeUntilQuit(pollTimeoutMs int64, quit chan 
       _, err := consumer.consumeWithConn(conn, msgHandler)
 			if err != nil && err != io.EOF {
 				log.Printf("ERROR: [%s] %#v\n",  consumer.broker.topic, err)
+        skippedMessageCount++
+			} else {
+			  messageCount++
 			}
       time.Sleep(time.Duration(pollTimeoutMs) * time.Millisecond)
     }
@@ -178,6 +181,8 @@ func (consumer *BrokerConsumer) consumeWithConn(conn *net.TCPConn, handlerFunc M
 		for currentOffset <= uint64(length-4) {
 			msg := Decode(payload[currentOffset:])
 			if msg == nil {
+    		// update the broker's offset for next consumption incase they want to skip this message and keep going
+    		consumer.offset += currentOffset
 				return num, errors.New("Error Decoding Message")
 			}
 			msg.offset = consumer.offset + currentOffset
