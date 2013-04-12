@@ -73,6 +73,7 @@ func NewBrokerOffsetConsumer(hostname string, topic string, partition int) *Brok
 		maxSize: 0}
 }
 
+// Continues until quit, notifying log.Println of any corrupted messages
 func (consumer *BrokerConsumer) ConsumeOnChannel(msgChan chan *Message, pollTimeoutMs int64, quit chan bool) (int, error) {
 	conn, err := consumer.broker.connect()
 	if err != nil {
@@ -90,9 +91,10 @@ func (consumer *BrokerConsumer) ConsumeOnChannel(msgChan chan *Message, pollTime
 
 			if err != nil {
 				if err != io.EOF {
-					log.Println("Fatal Error: ", err)
+					log.Println("ERROR IN MESSAGE BELOW: ", err)
+          msg.Print()
 				}
-				break
+        // break // FIXME TODO TMP don't die on errors with one message
 			}
 			time.Sleep(time.Duration(pollTimeoutMs) * time.Millisecond)
 		}
