@@ -30,7 +30,6 @@ import (
   "io"
   "log"
   "net"
-  "os"
 )
 
 const (
