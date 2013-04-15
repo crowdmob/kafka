@@ -71,6 +71,42 @@ func (consumer *BrokerConsumer) AddCodecs(payloadCodecs []PayloadCodec) {
   }
 }
 
+// Keeps consuming forward until quit, outputing errors, but not dying on them
+func (consumer *BrokerConsumer) ConsumeUntilQuit(pollTimeoutMs int64, quit chan os.Signal, msgHandler func(*Message)) (int64, int64, error) {
+  conn, err := consumer.broker.connect()
+  if err != nil {
+    return -1, 0, err
+  }
+
+  messageCount := int64(0)
+  skippedMessageCount := int64(0)
+  
+  quitReceived := false
+  done := make(chan bool, 1)
+  
+  go func() {
+    <-quit
+    quitReceived = true
+  }()
+  
+  go func() {
+    for !quitReceived {
+      _, err := consumer.consumeWithConn(conn, msgHandler)
+      if err != nil && err != io.EOF {
+        log.Printf("ERROR: [%s] %#v\n",  consumer.broker.topic, err)
+        skippedMessageCount++
+      } else {
+        messageCount++
+      }
+      time.Sleep(time.Duration(pollTimeoutMs) * time.Millisecond)
+    }
+    done <- true
+  }()
+  
+  <-done // wait until the last iteration finishes before returning
+  return messageCount, skippedMessageCount, nil
+}
+
 func (consumer *BrokerConsumer) ConsumeOnChannel(msgChan chan *Message, pollTimeoutMs int64, quit chan bool) (int, error) {
   conn, err := consumer.broker.connect()
   if err != nil {
