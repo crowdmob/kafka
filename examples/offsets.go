@@ -25,8 +25,7 @@ package main
 import (
   "flag"
   "fmt"
-  //kafka "svn.apache.org/repos/asf/incubator/kafka.svn/trunk/clients/go/src"
-  "kafka"
+  "github.com/crowdmob/kafka"
 )
 
 var hostname string
