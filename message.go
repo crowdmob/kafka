@@ -128,7 +128,7 @@ func Decode(packet []byte, payloadCodecsMap map[byte]PayloadCodec) (uint32, []Me
 }
 
 func decodeMessage(packet []byte, payloadCodecsMap map[byte]PayloadCodec) (uint32, *Message) {
-  if len(packet < 1) {
+  if len(packet) < 1 {
     log.Printf("empty packet, skipping")
     return 0, nil
   }
