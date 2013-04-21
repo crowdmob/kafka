@@ -92,7 +92,7 @@ func (consumer *BrokerConsumer) ConsumeUntilQuit(pollTimeoutMs int64, quit chan 
   go func() {
     for !quitReceived {
       var conn *net.TCPConn
-      if conn = nil { 
+      if conn == nil { 
         var connectionError error
         conn, connectionError = consumer.broker.connect()
         if connectionError != nil {
