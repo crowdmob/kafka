@@ -32,6 +32,10 @@ import (
   "os"
 )
 
+const (
+  CONNECTION_RETRY_WAIT_IN_SECONDS = 10
+)
+
 type BrokerConsumer struct {
   broker  *Broker
   offset  uint64
@@ -74,11 +78,6 @@ func (consumer *BrokerConsumer) AddCodecs(payloadCodecs []PayloadCodec) {
 
 // Keeps consuming forward until quit, outputing errors, but not dying on them
 func (consumer *BrokerConsumer) ConsumeUntilQuit(pollTimeoutMs int64, quit chan os.Signal, msgHandler func(*Message)) (int64, int64, error) {
-  conn, err := consumer.broker.connect()
-  if err != nil {
-    return -1, 0, err
-  }
-
   messageCount := int64(0)
   skippedMessageCount := int64(0)
   
@@ -92,14 +91,26 @@ func (consumer *BrokerConsumer) ConsumeUntilQuit(pollTimeoutMs int64, quit chan 
   
   go func() {
     for !quitReceived {
-      _, err := consumer.consumeWithConn(conn, msgHandler)
-      if err != nil && err != io.EOF {
-        log.Printf("ERROR: [%s] %#v\n",  consumer.broker.topic, err)
-        skippedMessageCount++
+      var conn *net.TCPConn
+      if conn = nil { 
+        var connectionError error
+        conn, connectionError = consumer.broker.connect()
+        if connectionError != nil {
+          conn = nil
+          log.Printf("ERROR: [%s] %#v, sleeping %d seconds to retry...\n",  consumer.broker.topic, connectionError, CONNECTION_RETRY_WAIT_IN_SECONDS)
+          time.Sleep(time.Duration(CONNECTION_RETRY_WAIT_IN_SECONDS * 1000) * time.Millisecond)
+        }
       } else {
-        messageCount++
+        _, err := consumer.consumeWithConn(conn, msgHandler)
+        if err != nil && err != io.EOF {
+          log.Printf("ERROR: [%s] %#v\n",  consumer.broker.topic, err)
+          skippedMessageCount++
+        } else {
+          messageCount++
+        }
+      
+        time.Sleep(time.Duration(pollTimeoutMs) * time.Millisecond)
       }
-      time.Sleep(time.Duration(pollTimeoutMs) * time.Millisecond)
     }
     done <- true
   }()
