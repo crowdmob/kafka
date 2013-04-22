@@ -90,17 +90,20 @@ func (consumer *BrokerConsumer) ConsumeUntilQuit(pollTimeoutMs int64, quit chan 
   }()
   
   go func() {
+    var conn *net.TCPConn
+    var lastConnectError error
+
+    conn, lastConnectError = consumer.broker.connect()
+    
     for !quitReceived {
-      var conn *net.TCPConn
-      if conn == nil { 
-        var connectionError error
-        conn, connectionError = consumer.broker.connect()
-        if connectionError != nil {
-          conn = nil
+      if lastConnectError != nil { 
+        conn, lastConnectError = consumer.broker.connect()
+        if lastConnectError != nil {
           log.Printf("ERROR: [%s] Couldn't connect to Kafka server: %#v, sleeping %d seconds to retry...\n",  consumer.broker.topic, connectionError, CONNECTION_RETRY_WAIT_IN_SECONDS)
           time.Sleep(time.Duration(CONNECTION_RETRY_WAIT_IN_SECONDS * 1000) * time.Millisecond)
         }
-      } else {
+      } 
+      if lastConnectError == nil {
         _, err := consumer.consumeWithConn(conn, msgHandler)
         if err != nil && err != io.EOF {
           log.Printf("ERROR: [%s] %#v\n",  consumer.broker.topic, err)
