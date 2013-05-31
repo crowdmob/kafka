@@ -147,11 +147,19 @@ func decodeMessage(packet []byte, payloadCodecsMap map[byte]PayloadCodec) (uint3
     msg.compression = byte(0)
     copy(msg.checksum[:], packet[5:9])
     payloadLength := length - 1 - 4
+    if len(packet) < 9+payloadLength {
+      log.Printf("length mismatch in msg.magic == 0, expected at least: %X, was: %X\n", 9+payloadLength, len(packet))
+      return 0, nil
+    }
     rawPayload = packet[9 : 9+payloadLength]
   } else if msg.magic == MAGIC_DEFAULT {
     msg.compression = packet[5]
     copy(msg.checksum[:], packet[6:10])
     payloadLength := length - NO_LEN_HEADER_SIZE
+    if len(packet) < 10+payloadLength {
+      log.Printf("length mismatch in msg.magic == MAGIC_DEFAULT, expected at least: %X, was: %X\n", 10+payloadLength, len(packet))
+      return 0, nil
+    }
     rawPayload = packet[10 : 10+payloadLength]
   } else {
     log.Printf("incorrect magic, expected: %X was: %X\n", MAGIC_DEFAULT, msg.magic)
