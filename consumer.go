@@ -108,6 +108,12 @@ func (consumer *BrokerConsumer) ConsumeUntilQuit(pollTimeoutMs int64, quit chan 
         if err != nil && err != io.EOF {
           log.Printf("ERROR: [%s] %#v\n",  consumer.broker.topic, err)
           skippedMessageCount++
+          netError, netok := err.(*net.OpError)
+          if (netok) {
+             if(!netError.Temporary()) {
+               conn, lastConnectError = consumer.broker.connect()
+             }
+          }
         } else {
           messageCount++
         }
